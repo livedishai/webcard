@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JEWELS-AI</title>
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --gold: #C9A84C;
+      --gold-light: #E8C97A;
+      --gold-pale: rgba(201,168,76,0.15);
+      --deep: #0A0A0F;
+      --surface: rgba(12,10,20,0.85);
+      --border: rgba(201,168,76,0.25);
+      --text: #F0EAD6;
+      --muted: rgba(240,234,214,0.5);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Jost', sans-serif;
+      background: var(--deep);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ── LOGO ── */
+    #logo-wrap {
+      position: absolute;
+      top: 20px; left: 20px;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #logo { width: 36px; height: 36px; }
+    #logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      font-weight: 300;
+      letter-spacing: 0.3em;
+      color: var(--gold-light);
+      text-transform: uppercase;
+    }
+    #logo-text span { color: var(--muted); }
+
+    /* ── SCAN HINT ── */
+    #scan-hint {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 150;
+      text-align: center;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+    #scan-hint.hidden { opacity: 0; }
+
+    .scan-ring {
+      width: 180px; height: 180px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      position: relative;
+      animation: pulse-ring 3s ease-in-out infinite;
+    }
+    .scan-ring::before, .scan-ring::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+    }
+    .scan-ring::before {
+      inset: 12px;
+      border: 1px solid rgba(201,168,76,0.4);
+      animation: pulse-ring 3s ease-in-out infinite 0.5s;
+    }
+    .scan-ring::after {
+      inset: 28px;
+      border: 1px dashed rgba(201,168,76,0.2);
+    }
+    .scan-icon {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      opacity: 0.6;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.05); opacity: 1; }
+    }
+    .scan-label {
+      font-family: 'Jost', sans-serif;
+      font-weight: 200;
+      font-size: 11px;
+      letter-spacing: 0.4em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .scan-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14px;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+
+    /* ── AR UI ── */
+    .ar-ui { display: none; }
+
+    /* ── BOTTOM PANEL ── */
+    #bottomPanel {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 200;
+      padding: 0 20px 28px;
+    }
+
+    .glass-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 20px 22px;
+      box-shadow:
+        0 0 0 1px rgba(201,168,76,0.05) inset,
+        0 30px 60px rgba(0,0,0,0.6),
+        0 0 40px rgba(201,168,76,0.04);
+    }
+
+    .card-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .brand-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
+      flex-shrink: 0;
+    }
+    .brand-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 16px;
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      color: var(--text);
+      text-transform: uppercase;
+    }
+    .brand-role {
+      font-size: 10px;
+      font-weight: 300;
+      letter-spacing: 0.35em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-left: auto;
+    }
+
+    /* Play button */
+    #toggleButton {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--gold-light);
+      font-family: 'Jost', sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+    #toggleButton::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--gold-pale), transparent);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    #toggleButton:hover::before { opacity: 1; }
+    #toggleButton:hover {
+      border-color: rgba(201,168,76,0.5);
+      box-shadow: 0 0 20px rgba(201,168,76,0.1);
+    }
+    #toggleButton.playing {
+      background: var(--gold-pale);
+      border-color: rgba(201,168,76,0.4);
+    }
+    .btn-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .btn-icon { font-size: 14px; }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .divider-text {
+      font-size: 9px;
+      letter-spacing: 0.5em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* Action buttons row */
+    .actions-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 12px 8px 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .action-btn::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--gold);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+    .action-btn:hover {
+      background: var(--gold-pale);
+      border-color: rgba(201,168,76,0.4);
+      transform: translateY(-2px);
+    }
+    .action-btn:hover::after { transform: scaleX(1); }
+    .action-btn:active { transform: translateY(0); }
+
+    .action-btn.whatsapp:hover {
+      background: rgba(37,211,102,0.08);
+      border-color: rgba(37,211,102,0.3);
+    }
+    .action-btn.whatsapp:hover .action-label { color: #25D366; }
+
+    .action-icon { font-size: 18px; line-height: 1; }
+    .action-label {
+      font-size: 8.5px;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 300;
+      transition: color 0.3s;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: absolute;
+      top: 80px; left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: rgba(12,10,20,0.95);
+      border: 1px solid var(--border);
+      color: var(--gold-light);
+      padding: 10px 22px;
+      border-radius: 30px;
+      z-index: 300;
+      display: none;
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(201,168,76,0.08);
+      white-space: nowrap;
+      animation: toast-in 0.3s ease forwards;
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(-50%) translateY(-16px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* ── DECORATIVE CORNER MARKS ── */
+    .corner {
+      position: absolute;
+      width: 18px; height: 18px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .corner.tl { top: 14px; left: 14px; border-top: 1px solid var(--gold); border-left: 1px solid var(--gold); }
+    .corner.tr { top: 14px; right: 14px; border-top: 1px solid var(--gold); border-right: 1px solid var(--gold); }
+    .corner.bl { bottom: 14px; left: 14px; border-bottom: 1px solid var(--gold); border-left: 1px solid var(--gold); }
+    .corner.br { bottom: 14px; right: 14px; border-bottom: 1px solid var(--gold); border-right: 1px solid var(--gold); }
+
+    /* ── STATUS DOT ── */
+    #status-dot {
+      position: absolute;
+      top: 22px; right: 20px;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--gold); }
+      50% { opacity: 0.3; box-shadow: none; }
+    }
+    #status-text {
+      font-size: 9px;
+      letter-spacing: 0.35em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .a-enter-vr-button { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Corner decoration -->
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+
+  <!-- Logo -->
+  <div id="logo-wrap">
+    <img src="logo.png" id="logo" alt="JEWELS-AI logo" onerror="this.style.display='none'">
+    <div id="logo-text">Jewels<span>·</span>AI</div>
+  </div>
+
+  <!-- Status indicator -->
+  <div id="status-dot">
+    <div class="live-dot"></div>
+    <span id="status-text">Scanning</span>
+  </div>
+
+  <!-- Scan hint (shown before target found) -->
+  <div id="scan-hint">
+    <div class="scan-ring">
+      <div class="scan-icon">✦</div>
+    </div>
+    <div class="scan-title"><b>Point at Jewels-Ai card</b></div>
+    <div class="scan-label"><b>To Try Our Jewels</b></div>
+  </div>
+
+  <!-- Bottom Panel (AR UI) -->
+  <div class="ar-ui" id="bottomPanel">
+    <div class="glass-card">
+      <div class="card-brand">
+        <div class="brand-dot"></div>
+        <div class="brand-name">Jewels-AI</div>
+        <div class="brand-role">AI Specialist</div>
+      </div>
+
+      <button id="toggleButton">
+        <div class="btn-inner">
+          <span class="btn-icon" id="btnIcon">▶</span>
+          <span id="btnText">Play Video</span>
+        </div>
+      </button>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-text">Connect</div>
+        <div class="divider-line"></div>
+      </div>
+
+      <div class="actions-row">
+        <button class="action-btn" id="locationBtn">
+          <span class="action-icon">📍</span>
+          <span class="action-label">Location</span>
+        </button>
+        <button class="action-btn" id="websiteBtn">
+          <span class="action-icon">🌐</span>
+          <span class="action-label">Website</span>
+        </button>
+        <button class="action-btn whatsapp" id="whatsappBtn">
+          <span class="action-icon">💬</span>
+          <span class="action-label">WhatsApp</span>
+        </button>
+        <button class="action-btn" id="saveContactBtn">
+          <span class="action-icon">💾</span>
+          <span class="action-label">Save</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <!-- A-Frame Scene -->
+  <a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind" 
+    color-space="sRGB" 
+    renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false">
+
+    <a-assets>
+      <!-- Replace FILE_ID_HERE with the file ID from your Google Drive folder -->
+      <video 
+        id="plan1Video" 
+        src="https://drive.google.com/drive/folders/1jRyVReP4cq7yk1VqwdFCMt0w4on4S77Q" 
+        playsinline 
+        webkit-playsinline 
+        preload="auto" 
+        loop 
+        crossorigin="anonymous">
+      </video>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity id="target1" mindar-image-target="targetIndex: 0">
+      <a-plane 
+        id="videoDisplay" 
+        position="0 0 0" 
+        width="1" 
+        height="0.59" 
+        material="src: #plan1Video; shader: flat; side: double">
+      </a-plane>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const contactInfo = {
+      name: "Jewels AI Team", 
+      phone: "+917019743880", 
+      email: "jewels.ai.info@gmail.com",
+      website: "https://www.jewels-ai.com", 
+      title: "AI Specialist", 
+      org: "JEWELS-AI",
+      locationUrl: "https://maps.app.goo.gl/eL7apWa8eKbQDPwY8", 
+      whatsapp: "+917019743880"
+    };
+
+    const sceneEl       = document.querySelector('a-scene');
+    const videoDisplay  = document.querySelector('#videoDisplay');
+    const videoEl       = document.querySelector('#plan1Video');
+    const uiElements    = document.querySelectorAll('.ar-ui');
+    const toggleButton  = document.querySelector('#toggleButton');
+    const btnIcon       = document.querySelector('#btnIcon');
+    const btnText       = document.querySelector('#btnText');
+    const saveContactBtn= document.querySelector('#saveContactBtn');
+    const locationBtn   = document.querySelector('#locationBtn');
+    const websiteBtn    = document.querySelector('#websiteBtn');
+    const whatsappBtn   = document.querySelector('#whatsappBtn');
+    const target        = document.querySelector('#target1');
+    const toast         = document.querySelector('#toast');
+    const scanHint      = document.querySelector('#scan-hint');
+    const statusText    = document.querySelector('#status-text');
+    let   isPlaying     = false;
+    let   toastTimer    = null;
+
+    function showToast(msg, t = 2200) {
+      if (toastTimer) clearTimeout(toastTimer);
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      toast.style.animation = 'none';
+      requestAnimationFrame(() => { toast.style.animation = ''; });
+      toastTimer = setTimeout(() => { toast.style.display = 'none'; }, t);
+    }
+
+    sceneEl.addEventListener('renderstart', () => {
+      const comp = sceneEl.querySelector('[mindar-image]');
+      if (comp && comp.components['mindar-image']) comp.components['mindar-image'].start();
+    });
+
+    function setUiVisibility(visible) {
+      uiElements.forEach(el => el.style.display = visible ? 'block' : 'none');
+      scanHint.classList.toggle('hidden', visible);
+      statusText.textContent = visible ? 'Live' : 'Scanning';
+    }
+
+    target.addEventListener('targetFound', () => { setUiVisibility(true); });
+    target.addEventListener('targetLost', () => {
+      setUiVisibility(false);
+      if (!videoEl.paused) videoEl.pause();
+      isPlaying = false;
+      btnIcon.textContent = '▶';
+      btnText.textContent = 'Play Video';
+      toggleButton.classList.remove('playing');
+    });
+
+    toggleButton.addEventListener('click', async () => {
+      if (!isPlaying) {
+        videoDisplay.setAttribute('material', 'src', '#plan1Video');
+        try {
+          await videoEl.play();
+          isPlaying = true;
+          btnIcon.textContent = '⏸';
+          btnText.textContent = 'Pause';
+          toggleButton.classList.add('playing');
+        } catch (err) {
+          showToast('Tap screen to allow video');
+        }
+      } else {
+        videoEl.pause();
+        isPlaying = false;
+        btnIcon.textContent = '▶';
+        btnText.textContent = 'Play Video';
+        toggleButton.classList.remove('playing');
+      }
+    });
+
+    saveContactBtn.addEventListener('click', () => {
+      const vcard = [
+        "BEGIN:VCARD", "VERSION:3.0",
+        `FN:${contactInfo.name}`, `ORG:${contactInfo.org}`,
+        `TITLE:${contactInfo.title}`, `TEL;TYPE=WORK,VOICE:${contactInfo.phone}`,
+        `EMAIL:${contactInfo.email}`, `URL:${contactInfo.website}`, "END:VCARD"
+      ].join("\n");
+      const blob = new Blob([vcard], { type: "text/vcard" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.download = `${contactInfo.name.replace(/\s+/g, '_')}.vcf`;
+      a.href = url; a.click(); URL.revokeObjectURL(url);
+      showToast('✦ Contact saved');
+    });
+
+    locationBtn.addEventListener('click', () => {
+      window.open(contactInfo.locationUrl, '_blank');
+      showToast('✦ Opening Maps');
+    });
+    websiteBtn.addEventListener('click', () => {
+      window.open(contactInfo.website, '_blank');
+      showToast('✦ Opening Website');
+    });
+    whatsappBtn.addEventListener('click', () => {
+      const n = contactInfo.whatsapp.replace(/[^0-9]/g, '');
+      window.open(`https://wa.me/${n}`, '_blank');
+      showToast('✦ Opening WhatsApp');
+    });
+
+    document.addEventListener("contextmenu", e => e.preventDefault());
+  </script>
+</body>
+</html>
