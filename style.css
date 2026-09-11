@@ -1,0 +1,142 @@
+<style>
+  /* 1. RESET & BASE STYLES */
+  body { 
+    margin: 0; 
+    background: #000; 
+    overflow: hidden; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+  }
+
+  /* 2. THE BLACK CURTAIN: Blocks everything, including the blue screen */
+  #blackCurtain {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 99999; /* Higher priority than all MindAR elements */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.5s ease; /* Professional fade-out */
+  }
+
+  /* 3. CUSTOM LOADER (Jewels-AI Style) */
+  #loader {
+    color: white;
+    text-align: center;
+    font-size: 18px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+  }
+
+  /* 4. BUTTON PANEL STYLES */
+  .button-panel {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none; 
+    z-index: 100;
+  }
+
+  .plan-button {
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #5E0F8B 0%, #3e0a5c 100%);
+    color: #fff;
+    cursor: pointer;
+    min-width: 180px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: transform 0.1s ease;
+  }
+
+  .plan-button:active {
+    transform: scale(0.95);
+  }
+
+  /* 5. FORCE-HIDE ANY STRAY MINDAR ELEMENTS (LOCKDOWN) */
+  [class^="mindar-ui"],
+  [id^="mindar-ui"],
+  .mindar-ui-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  /* 6. SCENE & CANVAS RESET */
+  a-scene, .a-canvas {
+    background-color: #000 !important;
+  }
+  /* ===== Floating Logo - Bottom Right FIXED ===== */
+#logoButton {
+  position: fixed !important;
+  bottom: 25px !important;
+  right: 25px !important;
+  top: auto !important;
+  left: auto !important;
+
+  width: 0.0001px;
+  height: 0.0001px;
+
+  z-index: -0.0001; /* Above AR, above buttons */
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: transform 0.2s ease;
+}
+
+#logoButton img {
+  width: 0.0001%;
+  height: 0.0001%;
+  object-fit: contain;
+}
+
+#logoButton:hover {
+  transform: scale(1.1);
+}
+</style>
+/* Instagram Button Styling */
+#instagramButton {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  width: 50px;
+  height: 50px;
+  z-index: 1000; /* Ensures it stays above the AR scene and panels */
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+#instagramButton img {
+  width: 35px;
+  height: 35px;
+}
+
+#instagramButton:hover {
+  transform: scale(1.1);
+}
+
+#instagramButton:active {
+  transform: scale(0.95);
+}

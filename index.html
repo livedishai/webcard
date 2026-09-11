@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JEWELS-AI | Live Drive AR</title>
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    /* RESET & BASE STYLES */
+    body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+
+    /* THE BLACK CURTAIN: Blocks the blue screen entirely */
+    #blackCurtain {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      z-index: 99999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.5s ease;
+    }
+
+    #loader {
+      color: white;
+      font-size: 18px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-align: center;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .button-panel {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      z-index: 100;
+    }
+
+    .plan-button {
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #5E0F8B 0%, #3e0a5c 100%);
+      color: #fff;
+      cursor: pointer;
+      min-width: 180px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    /* INSTAGRAM BUTTON STYLING - FIXED POSITION */
+    #instagramButton {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      width: 55px;
+      height: 55px;
+      z-index: 100000; /* Ensure it stays above everything */
+      cursor: pointer;
+      background: white;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      transition: transform 0.2s ease;
+      text-decoration: none;
+    }
+
+    #instagramButton img {
+      width: 38px;
+      height: 38px;
+    }
+
+    #instagramButton:hover {
+      transform: scale(1.1);
+    }
+
+    #instagramButton:active {
+      transform: scale(0.95);
+    }
+
+    /* Hide MindAR UI elements */
+    [class^="mindar-ui"] { display: none !important; }
+  </style>
+</head>
+
+<body>
+
+<div id="blackCurtain">
+  <div id="loader">Initializing AI Engine...</div>
+</div>
+
+<a href="https://www.instagram.com/overlay_gifts_ai/" target="_blank" id="instagramButton">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram">
+</a>
+
+<div class="button-panel" id="planButtons">
+  <button class="plan-button" id="toggleButton">▶️ Play Video</button>
+</div>
+
+<a-scene 
+  mindar-image="imageTargetSrc: ./targets.mind; uiLoading: no; uiError: no;"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+  renderer="antialias: true; alpha: true">
+
+  <a-assets>
+    <video
+      id="driveVideo"
+      playsinline
+      preload="auto"
+      loop
+      crossorigin="anonymous">
+    </video>
+  </a-assets>
+
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+  <a-entity id="target1" mindar-image-target="targetIndex: 0">
+   <a-plane
+  id="videoPlane"
+  width="1"
+  height="1"
+  visible="false"
+  material="src: #driveVideo; side: double; transparent: true">
+</a-plane>
+  </a-entity>
+
+</a-scene>
+
+<script>
+/* ===============================
+   CONFIGURATION
+================================ */
+const API_KEY = "AIzaSyA_mBu6emRKASkqHpLtwkdBiCQKYO3rvcw"; 
+const FOLDER_ID = "1sGlKlKHzNh_qfyKqIbxql0uYVQtwSLDv";
+ 
+
+/* ===============================
+   CHROMA SHADER
+================================ */
+AFRAME.registerShader('chromakey', {
+  schema: {
+    src: {type: 'map'},
+    color: {type: 'color', default: '#00FF00'},
+    threshold: {type: 'number', default: 0.3},
+    smoothness: {type: 'number', default: 0.05}
+  },
+  init: function(data) {
+    const videoTexture = new THREE.VideoTexture(data.src);
+    this.material = new THREE.ShaderMaterial({
+      uniforms: {
+        tex: {value: videoTexture},
+        keyColor: {value: new THREE.Color(data.color)},
+        similarity: {value: data.threshold},
+        smoothness: {value: data.smoothness}
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tex;
+        uniform vec3 keyColor;
+        uniform float similarity;
+        uniform float smoothness;
+        varying vec2 vUv;
+        void main() {
+          vec4 videoColor = texture2D(tex, vUv);
+          float diff = distance(videoColor.rgb, keyColor);
+          float alpha = smoothstep(similarity, similarity + smoothness, diff);
+          if (alpha < 0.1) discard;
+          gl_FragColor = vec4(videoColor.rgb, alpha);
+        }
+      `,
+      transparent: true
+    });
+  }
+});
+
+/* ===============================
+   FRESH DRIVE FETCH (NO CACHE)
+================================ */
+async function getLatestVideo() {
+  const url = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents+and+mimeType+contains+'video/'&orderBy=modifiedTime+desc&pageSize=1&fields=files(id)&key=${API_KEY}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.files && data.files.length > 0) {
+      return data.files[0].id;
+    }
+  } catch (e) {
+    console.error("Fetch error:", e);
+  }
+  return null;
+}
+
+/* ===============================
+   AR LOGIC
+================================ */
+window.addEventListener("load", () => {
+  const videoEl = document.querySelector("#driveVideo");
+  const videoPlane = document.querySelector("#videoPlane");
+  const target = document.querySelector("#target1");
+  const toggleButton = document.querySelector("#toggleButton");
+  const buttonsContainer = document.querySelector("#planButtons");
+  const curtain = document.querySelector("#blackCurtain");
+  const sceneEl = document.querySelector('a-scene');
+
+  let isPlaying = false;
+
+  sceneEl.addEventListener("arReady", () => {
+    curtain.style.opacity = "0";
+    setTimeout(() => { curtain.style.display = "none"; }, 500);
+  });
+
+  videoEl.addEventListener('playing', () => {
+    videoPlane.setAttribute('visible', 'true'); 
+  });
+
+  target.addEventListener("targetFound", async () => {
+    buttonsContainer.style.display = "block";
+    
+    const fileId = await getLatestVideo();
+    if (fileId) {
+      const newSrc = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+      if (videoEl.src !== newSrc) {
+        videoEl.src = newSrc;
+        videoEl.load();
+      }
+    }
+  });
+
+  target.addEventListener("targetLost", () => {
+    buttonsContainer.style.display = "none";
+    videoEl.pause();
+    videoPlane.setAttribute('visible', 'false'); 
+    isPlaying = false;
+    toggleButton.textContent = "▶️ Play Video";
+  });
+
+  toggleButton.addEventListener("click", async () => {
+    if (!isPlaying) {
+      videoEl.muted = false; 
+      await videoEl.play();
+      toggleButton.textContent = "⏸ Pause Video";
+      isPlaying = true;
+    } else {
+      videoEl.pause();
+      toggleButton.textContent = "▶️ Play Video";
+      isPlaying = false;
+    }
+  });
+});
+
+document.addEventListener("contextmenu", e => e.preventDefault());
+</script>
+
+</body>
+</html>
